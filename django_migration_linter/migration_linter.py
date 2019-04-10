@@ -54,6 +54,7 @@ class MigrationLinter(object):
         self.cache_path = kwargs.get("cache_path", None) or DEFAULT_CACHE_PATH
         self.no_cache = kwargs.get("no_cache", None) or False
         self.include_migration_file = kwargs.get("include_migration_file", None)
+        self.zappa_stage = kwargs.get("zappa_stage", None)
 
         # Initialise counters
         self.nb_valid = 0
@@ -177,11 +178,19 @@ class MigrationLinter(object):
         Even if calling a shell is slow and ugly, for now,
         it allows to seperate the instances correctly.
         """
-        sqlmigrate_command = (
-            "cd {0} && {1} manage.py sqlmigrate {2} '{3}' --database {4}"
-        ).format(
-            self.django_path, sys.executable, app_name, migration_name, self.database
-        )
+        if self.zappa_stage:
+            sqlmigrate_command = (
+                "zappa manage {0} sqlmigrate {1} '{2}' --database {3}"
+            ).format(
+                self.zappa_stage, app_name, migration_name, self.database
+            )
+        else: 
+            sqlmigrate_command = (
+                "cd {0} && {1} manage.py sqlmigrate {2} '{3}' --database {4}"
+            ).format(
+                self.django_path, sys.executable, app_name, migration_name, self.database
+            )
+
         logger.info("Executing {0}".format(sqlmigrate_command))
         sqlmigrate_process = Popen(
             sqlmigrate_command, shell=True, stdout=PIPE, stderr=PIPE
@@ -339,6 +348,11 @@ def _main():
              "which should be generated with "
              "\'python manage.py showmigrations | grep '\[ \]\|^[a-z]' | grep '[  ]' -B 1 > unapplied_migrations.log'"
     )
+    incl_excl_group.add_argument(
+        "--zappa-stage",
+        type=str,
+        help="use zappa manage to get_sql from specified stage"
+    )
 
     args = parser.parse_args()
     if args.verbose:
@@ -357,7 +371,8 @@ def _main():
         database=args.database,
         cache_path=args.cache_path,
         no_cache=args.no_cache,
-        include_migration_file=args.include_migration_file
+        include_migration_file=args.include_migration_file,
+        zappa_stage=args.zappa_stage
     )
     linter.lint_all_migrations(git_commit_id=args.commit_id)
     linter.print_summary()
