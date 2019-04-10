@@ -180,7 +180,7 @@ class MigrationLinter(object):
         """
         if self.zappa_stage:
             sqlmigrate_command = (
-                "zappa manage {0} sqlmigrate {1} '{2}' --database {3}"
+                "zappa manage {0} \"sqlmigrate {1} {2} --database {3}\""
             ).format(
                 self.zappa_stage, app_name, migration_name, self.database
             )
@@ -348,7 +348,7 @@ def _main():
              "which should be generated with "
              "\'python manage.py showmigrations | grep '\[ \]\|^[a-z]' | grep '[  ]' -B 1 > unapplied_migrations.log'"
     )
-    incl_excl_group.add_argument(
+    parser.add_argument(
         "--zappa-stage",
         type=str,
         help="use zappa manage to get_sql from specified stage"
