@@ -244,15 +244,15 @@ class MigrationLinter(object):
                     migration_name in self.parsed_unapplied_migrations[app_name])
             return should_ignore
         else:
-        return (
-            (self.include_apps and app_name not in self.include_apps)
-            or (self.exclude_apps and app_name in self.exclude_apps)
-            or (
-                self.ignore_name_contains
-                and self.ignore_name_contains in migration_name
+            return (
+                (self.include_apps and app_name not in self.include_apps)
+                or (self.exclude_apps and app_name in self.exclude_apps)
+                or (
+                    self.ignore_name_contains
+                    and self.ignore_name_contains in migration_name
+                )
+                or (migration_name in self.ignore_name)
             )
-            or (migration_name in self.ignore_name)
-        )
 
 
 def _main():
