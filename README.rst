@@ -46,6 +46,7 @@ Usage
 ``--database DATABASE``                            Specify the database for which to generate the SQL. Defaults to *default*.
 ``--cache-path PATH``                              specify a directory that should be used to store cache-files in.
 ``--no-cache``                                     Don't use a cache.
+``--include-migration-file MIGRATIONS_FILE``       only in file created: python manage.py showmigrations | grep '\[ \]\|^[a-z]' | grep '[  ]' -B 1 > unapplied_migrations.log
 ================================================== ===========================================================================================================================
 
 Examples

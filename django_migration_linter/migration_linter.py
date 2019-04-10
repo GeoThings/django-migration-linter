@@ -22,7 +22,7 @@ import sys
 from .cache import Cache
 from .constants import DEFAULT_CACHE_PATH, MIGRATION_FOLDER_NAME, __version__
 from .migration import Migration
-from .utils import is_directory, is_django_project, clean_bytes_to_str
+from .utils import is_directory, is_django_project, clean_bytes_to_str, parse_unapplied_migrations
 from .sql_analyser import analyse_sql_statements
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,7 @@ class MigrationLinter(object):
         self.database = kwargs.get("database", None) or "default"
         self.cache_path = kwargs.get("cache_path", None) or DEFAULT_CACHE_PATH
         self.no_cache = kwargs.get("no_cache", None) or False
+        self.include_migration_file = kwargs.get("include_migration_file", None)
 
         # Initialise counters
         self.nb_valid = 0
@@ -65,6 +66,9 @@ class MigrationLinter(object):
             self.old_cache = Cache(self.django_path, self.cache_path)
             self.new_cache = Cache(self.django_path, self.cache_path)
             self.old_cache.load()
+
+        if self.include_migration_file:
+            self.parsed_unapplied_migrations = parse_unapplied_migrations(self.include_migration_file)
 
     def lint_migration(self, migration):
         app_name = migration.app_name
@@ -234,6 +238,12 @@ class MigrationLinter(object):
         return migrations
 
     def should_ignore_migration(self, app_name, migration_name):
+        if self.parsed_unapplied_migrations:
+            should_ignore = not (
+                    app_name in self.parsed_unapplied_migrations and
+                    migration_name in self.parsed_unapplied_migrations[app_name])
+            return should_ignore
+        else:
         return (
             (self.include_apps and app_name not in self.include_apps)
             or (self.exclude_apps and app_name in self.exclude_apps)
@@ -322,6 +332,13 @@ def _main():
         nargs="*",
         help="ignore migrations that are in the specified django apps",
     )
+    incl_excl_group.add_argument(
+        "--include-migration-file",
+        type=str,
+        help="check only migration that are listed in the file passed, "
+             "which should be generated with "
+             "\'python manage.py showmigrations | grep '\[ \]\|^[a-z]' | grep '[  ]' -B 1 > unapplied_migrations.log'"
+    )
 
     args = parser.parse_args()
     if args.verbose:
@@ -340,6 +357,7 @@ def _main():
         database=args.database,
         cache_path=args.cache_path,
         no_cache=args.no_cache,
+        include_migration_file=args.include_migration_file
     )
     linter.lint_all_migrations(git_commit_id=args.commit_id)
     linter.print_summary()

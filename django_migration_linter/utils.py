@@ -81,3 +81,27 @@ def compose_migration_path(django_folder, app_name, migration):
 
 def clean_bytes_to_str(byte_input):
     return byte_input.decode("utf-8").strip()
+
+
+def parse_unapplied_migrations(filename):
+    target = {}
+    app_name = None
+    migrations = []
+
+    with open(filename, 'r') as migration_file:
+        for line in [line.strip() for line in migration_file.readlines()]:
+            app_name_match = re.match(r"^([a-zA-Z0-9_\.]*)$", line)
+            migration_name_match = re.match(r"^\s*\[\s\]\s*([a-zA-Z0-9_\.]*)$", line)
+
+            if app_name_match and len(app_name_match.groups()) == 1:
+                if app_name and len(migrations) > 0:
+                    target[app_name] = migrations
+                    migrations = []
+
+                app_name = app_name_match.groups()[0]
+            elif migration_name_match and len(migration_name_match.groups()) == 1:
+                migrations.append(migration_name_match.groups()[0])
+
+    if app_name and len(migrations) > 0:
+        target[app_name] = migrations
+    return target
